@@ -4,7 +4,7 @@ A simplified, robust TCP socket listener with post-processing support.
 
 ## Overview
 
-This is a cleaned-up version of a socket server that was originally based on an Iridium DirectIP listener. All DirectIP/Iridium-specific code has been removed, leaving a clean, generic socket server.
+This is a clean, generic socket server.
 
 ## Features
 
@@ -24,11 +24,11 @@ This is a cleaned-up version of a socket server that was originally based on an 
 
 2. **Or use the CLI directly**:
    ```bash
-   python3 cli.py --loglevel=info --logfile=log/socket listen \
-       --host=128.171.46.213 \
+   python cli.py --loglevel=info --logfile=log/socket listen \
+       --host=0.0.0.0 \
        --port=15001 \
        --datadir=data \
-       --post-processing=bin/postproc2 \
+       --post-processing=bin/postproc_simple.py \
        --max-connections=100
    ```
 
@@ -58,7 +58,7 @@ The server can run external scripts on each received message. The script receive
 
 Example post-processing script usage:
 ```bash
-python3 cli.py listen --host=0.0.0.0 --port=15001 --datadir=./data --post-processing=./bin/postproc2
+python cli.py listen --host=0.0.0.0 --port=15001 --datadir=./data --post-processing=./bin/postproc
 ```
 
 ## Dependencies
@@ -76,16 +76,5 @@ pip install -r requirements.txt
 - `socket_server/server.py` - Main server implementation
 - `cli.py` - Command-line interface
 - `bin/start_server` - Startup script
-- `bin/postproc2` - Post-processing script (your existing script)
+- `bin/postproc` - Post-processing script (your existing script)
 - `requirements.txt` - Python dependencies
-
-## Migration Notes
-
-This server replaces the original DirectIP-based implementation. All functionality is preserved:
-
-- Same data directory structure
-- Same post-processing script interface
-- Same log file format
-- Same command-line interface (with additional options)
-
-The main difference is that the code is now clean and free of DirectIP/Iridium-specific references, making it much easier to understand and maintain.
