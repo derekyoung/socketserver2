@@ -1,0 +1,13 @@
+[Unit]
+Description=socketServer Daemon
+After=network.target
+
+[Service]
+User=socket
+Group=users
+WorkingDirectory=/home/socket
+ExecStart=/home/socket/venv/bin/python cli.py --loglevel=info --logfile=log listen --host=localhost --port=15001 --datadir=data --post-processing=bin/postproc
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
