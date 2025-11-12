@@ -8,6 +8,7 @@ This script connects to the socket server and sends a single line of data.
 import socket
 import argparse
 import sys
+import os
 
 
 def send_single_line(host, port, message):
@@ -38,13 +39,34 @@ def send_single_line(host, port, message):
 def main():
     """Main function to send a single line transmission."""
     parser = argparse.ArgumentParser(description='Send a single line transmission to the socket server')
-    parser.add_argument('message', help='Message to send (single line)')
+    parser.add_argument('message', nargs='?', help='Message to send (single line) - used if -i is not provided')
+    parser.add_argument('-i', '--input', help='Input file to read message from')
     parser.add_argument('--host', default='127.0.0.1', help='Server host (default: 127.0.0.1)')
     parser.add_argument('--port', type=int, default=15001, help='Server port (default: 15001)')
     
     args = parser.parse_args()
     
-    success = send_single_line(args.host, args.port, args.message)
+    # Determine message source
+    if args.input:
+        # Read from file
+        if not os.path.exists(args.input):
+            print(f"Error: File not found: {args.input}", file=sys.stderr)
+            sys.exit(1)
+        try:
+            with open(args.input, 'r', encoding='utf-8') as f:
+                message = f.read()
+        except Exception as e:
+            print(f"Error reading file: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.message:
+        # Use positional argument
+        message = args.message
+    else:
+        print("Error: Either provide a message as argument or use -i <filename>", file=sys.stderr)
+        parser.print_help()
+        sys.exit(1)
+    
+    success = send_single_line(args.host, args.port, message)
     sys.exit(0 if success else 1)
 
 
