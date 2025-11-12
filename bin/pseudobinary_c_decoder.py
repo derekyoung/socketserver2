@@ -247,9 +247,7 @@ class PseudobinaryCDecoder:
             # Append to final post-processed data transmission.
             formatted_data.append(entry)
 
-        # Sort data transmission on time.
-        formatted_data = sorted(formatted_data, key=lambda x: x['time'], reverse=True)
-
+        # Note: Data will be sorted by time (oldest first) in write_to_csv
         return formatted_data
 
     def read_file_content(self, file_path):
@@ -275,40 +273,74 @@ class PseudobinaryCDecoder:
 
     def write_to_csv(self, data, output_file, append_mode=True):
         """
-        Function to write data to CSV file, appending or creating as necessary.
+        Function to write data to CSV file, loading existing data, checking for duplicates,
+        and writing in time order (oldest first).
         """
         if not data:
             print("No data to write to CSV")
             return False
 
-        # Check if file exists and has content
+        # Load existing CSV data if file exists and append_mode is True
+        existing_data = []
         file_exists = os.path.exists(output_file)
-        has_header = False
 
         if file_exists and append_mode:
-            # Check if file has a header
             try:
-                with open(output_file, 'r', encoding='utf-8') as f:
-                    first_line = f.readline().strip()
-                    has_header = bool(first_line)
-            except (IOError, OSError):
-                has_header = False
+                with open(output_file, 'r', encoding='utf-8') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    # Skip header row
+                    for row in reader:
+                        existing_data.append(row)
+            except (IOError, OSError) as e:
+                print(f"Warning: Could not read existing CSV file {output_file}: {e}")
+                existing_data = []
 
-        # Write data to CSV
+        # Combine existing and new data
+        all_data = existing_data + data
+
+        # Deduplicate based on (time, sensor) combination
+        # Use a set to track seen combinations, keeping the first occurrence
+        seen = set()
+        deduplicated_data = []
+        duplicates_found = 0
+
+        for row in all_data:
+            # Create a unique key from time and sensor
+            key = (row['time'], row['sensor'])
+            if key not in seen:
+                seen.add(key)
+                deduplicated_data.append(row)
+            else:
+                duplicates_found += 1
+
+        if duplicates_found > 0:
+            print(f"Found and removed {duplicates_found} duplicate record(s)")
+
+        # Sort by time (oldest first)
         try:
-            with open(output_file, 'a' if (append_mode and file_exists) else 'w', newline='', encoding='utf-8') as csvfile:
+            deduplicated_data = sorted(
+                deduplicated_data,
+                key=lambda x: datetime.strptime(x['time'], '%Y-%m-%d %H:%M:%S+00:00')
+            )
+        except (ValueError, KeyError) as e:
+            print(f"Warning: Could not sort by time: {e}. Writing unsorted data.")
+            # Fallback: try string sort
+            deduplicated_data = sorted(deduplicated_data, key=lambda x: x.get('time', ''))
+
+        # Write all data to CSV (overwrite mode to ensure clean file)
+        try:
+            with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = ['time', 'sensor', 'data']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
 
-                # Write header if creating new file or appending to file without header
-                if not file_exists or not has_header:
-                    writer.writeheader()
-
-                # Write data rows
-                for row in data:
+                # Write all deduplicated and sorted data
+                for row in deduplicated_data:
                     writer.writerow(row)
 
-            print(f"Successfully wrote {len(data)} records to {output_file}")
+            new_records = len(data)
+            total_records = len(deduplicated_data)
+            print(f"Successfully wrote {total_records} total records ({new_records} new) to {output_file}")
             return True
 
         except (IOError, OSError) as e:
