@@ -6,6 +6,8 @@ This script reads pseudobinary-c data files, extracts the station name,
 creates CSV files named after the station and current year, and archives
 the processed input files.
 """
+# pylint: disable=line-too-long,trailing-whitespace
+
 
 import argparse
 import os
@@ -34,7 +36,7 @@ def archive_file(filepath, station_name=None, archive_base_dir=None):
     """
     try:
         if not os.path.exists(filepath):
-            logger.warning(f"File not found for archiving: {filepath}")
+            logger.warning("File not found for archiving: %s", filepath)
             return False
         
         # Determine archive base directory
@@ -67,11 +69,11 @@ def archive_file(filepath, station_name=None, archive_base_dir=None):
         archive_path = os.path.join(archive_dir, processed_name)
         shutil.move(filepath, archive_path)
         
-        logger.info(f"Archived: {filename} -> {archive_path}")
+        logger.info("Archived: %s -> %s", filename, archive_path)
         return True
         
-    except Exception as e:
-        logger.error(f"Error archiving file {filepath}: {e}")
+    except (OSError, shutil.Error) as e:
+        logger.error("Error archiving file %s: %s", filepath, e)
         return False
 
 
@@ -98,10 +100,10 @@ def move_to_error(filepath, error_base_dir=None):
         error_dir = os.path.join(error_base_dir, 'error')
         os.makedirs(error_dir, exist_ok=True)
         shutil.move(filepath, error_dir)
-        logger.info(f"Moved to error directory: {filepath}")
+        logger.info("Moved to error directory: %s", filepath)
         return True
-    except Exception as e:
-        logger.error(f"Error moving file to error directory: {e}")
+    except (OSError, shutil.Error) as e:
+        logger.error("Error moving file to error directory: %s", e)
         return False
 
 
@@ -118,13 +120,13 @@ def main():
 
     # Validate input file exists
     if not os.path.exists(args.input):
-        logger.error(f"Input file not found: {args.input}")
+        logger.error("Input file not found: %s", args.input)
         sys.exit(1)
 
     # Check if file is empty
     try:
         if os.path.getsize(args.input) == 0:
-            logger.warning(f"Empty input file: {args.input}")
+            logger.warning("Empty input file: %s", args.input)
             # Move empty files to empty directory
             file_dir = os.path.dirname(os.path.abspath(args.input))
             if 'inbox' in file_dir:
@@ -134,10 +136,10 @@ def main():
             empty_dir = os.path.join(data_dir, 'empty')
             os.makedirs(empty_dir, exist_ok=True)
             shutil.move(args.input, empty_dir)
-            logger.info(f"Moved empty file to: {empty_dir}")
+            logger.info("Moved empty file to: %s", empty_dir)
             sys.exit(0)
     except OSError as e:
-        logger.error(f"Error checking file size: {e}")
+        logger.error("Error checking file size: %s", e)
         move_to_error(args.input, args.archive_dir)
         sys.exit(1)
 
@@ -158,7 +160,7 @@ def main():
         # Generate output filename
         if station_name:
             output_file = f"{station_name}_{current_year}.csv"
-            logger.info(f"Station detected: {station_name}")
+            logger.info("Station detected: %s", station_name)
         else:
             output_file = f"decoded_data_{current_year}.csv"
             logger.warning("No station name found, using default filename")
@@ -181,7 +183,7 @@ def main():
         success = decoder.write_to_csv(formatted_data, output_file, append_mode=True)
 
         if success:
-            logger.info(f"Successfully created/updated {output_file}")
+            logger.info("Successfully created/updated %s", output_file)
             
             # Archive the input file if not disabled
             if not args.no_archive:
@@ -195,8 +197,8 @@ def main():
             move_to_error(args.input, args.archive_dir)
             sys.exit(1)
 
-    except Exception as e:
-        logger.error(f"Error processing {args.input}: {e}", exc_info=True)
+    except (OSError, ValueError, KeyError) as e:
+        logger.error("Error processing %s: %s", args.input, e, exc_info=True)
         move_to_error(args.input, args.archive_dir)
         sys.exit(1)
 
